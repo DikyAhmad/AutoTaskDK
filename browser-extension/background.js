@@ -8,12 +8,28 @@ const WS_URL = 'ws://localhost:8765';
 const RECONNECT_INTERVAL = 3000;
 const KEEPALIVE_ALARM = 'ws-keepalive';
 
+let isManualDisconnect = false;
+let initPromise = null;
+
+function waitForInit() {
+  if (initPromise) return initPromise;
+  initPromise = new Promise((resolve) => {
+    chrome.storage.local.get(['isManualDisconnect'], (result) => {
+      isManualDisconnect = !!result.isManualDisconnect;
+      console.log('[AutoClick] Storage loaded. Manual disconnect:', isManualDisconnect);
+      resolve();
+    });
+  });
+  return initPromise;
+}
+
 // ─── Keepalive (prevent service worker termination) ──
 chrome.alarms.create(KEEPALIVE_ALARM, { periodInMinutes: 0.4 });
-chrome.alarms.onAlarm.addListener((alarm) => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === KEEPALIVE_ALARM) {
+    await waitForInit();
     // Just keep the service worker alive
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
+    if (!isManualDisconnect && (!ws || ws.readyState !== WebSocket.OPEN)) {
       connect();
     }
   }
@@ -21,6 +37,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 // ─── WebSocket Connection ───────────────────────────
 function connect() {
+  if (isManualDisconnect) return;
   if (ws && ws.readyState === WebSocket.OPEN) return;
 
   // Clean up any existing connection
@@ -66,7 +83,7 @@ function connect() {
       console.log('[AutoClick] Disconnected');
       ws = null;
       broadcastStatus(false);
-      scheduleReconnect();
+      if (!isManualDisconnect) scheduleReconnect();
     };
 
     ws.onerror = () => {
@@ -81,6 +98,7 @@ function connect() {
 }
 
 function scheduleReconnect() {
+  if (isManualDisconnect) return;
   clearTimeout(reconnectTimer);
   reconnectTimer = setTimeout(connect, RECONNECT_INTERVAL);
 }
@@ -93,10 +111,12 @@ function sendToElectron(data) {
 
 // ─── Broadcast Status to Popup ──────────────────────
 function broadcastStatus(connected) {
-  chrome.runtime.sendMessage({
+  const status = {
     type: 'status',
-    connected,
-  }).catch(() => {}); // Popup may not be open
+    connected: !!connected,
+    isManualDisconnect: !!isManualDisconnect
+  };
+  chrome.runtime.sendMessage(status).catch(() => {});
 }
 
 // ─── Get Active Tab ─────────────────────────────────
@@ -269,37 +289,51 @@ async function executeTask(actions) {
 
 // ─── Message Listener (from popup & content script) ─
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'get-status') {
-    sendResponse({
-      connected: ws && ws.readyState === WebSocket.OPEN,
-    });
-    return true;
-  }
+  (async () => {
+    await waitForInit();
 
-  if (msg.type === 'reconnect') {
-    connect();
-    sendResponse({ ok: true });
-    return true;
-  }
-
-  // Relay picker results from content script to Electron
-  if (msg.type === 'picker-result') {
-    sendToElectron({
-      type: 'picker-result',
-      selector: msg.selector,
-      tag: msg.tag,
-      text: msg.text,
-      id: msg.id,
-      classes: msg.classes,
-    });
-    return;
-  }
-
-  if (msg.type === 'picker-cancelled') {
-    sendToElectron({ type: 'picker-cancelled' });
-    return;
-  }
+    if (msg.type === 'get-status') {
+      sendResponse({
+        connected: ws && ws.readyState === WebSocket.OPEN,
+        isManualDisconnect,
+      });
+    } else if (msg.type === 'toggle-manual-disconnect') {
+      isManualDisconnect = msg.value;
+      await chrome.storage.local.set({ isManualDisconnect });
+      
+      if (isManualDisconnect) {
+        if (ws) {
+          try { ws.close(); } catch (e) {}
+          ws = null;
+        }
+        clearTimeout(reconnectTimer);
+        broadcastStatus(false);
+      } else {
+        connect();
+      }
+      sendResponse({ ok: true });
+    } else if (msg.type === 'reconnect') {
+      if (!isManualDisconnect) connect();
+      sendResponse({ ok: true });
+    } else if (msg.type === 'picker-result') {
+      sendToElectron({
+        type: 'picker-result',
+        selector: msg.selector,
+        tag: msg.tag,
+        text: msg.text,
+        id: msg.id,
+        classes: msg.classes,
+      });
+    } else if (msg.type === 'picker-cancelled') {
+      sendToElectron({ type: 'picker-cancelled' });
+    }
+  })();
+  return true; // Keep channel open for async sendResponse
 });
 
 // ─── Init ───────────────────────────────────────────
-connect();
+waitForInit().then(() => {
+  if (!isManualDisconnect) {
+    connect();
+  }
+});
