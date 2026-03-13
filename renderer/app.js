@@ -17,6 +17,7 @@ const ACTION_CONFIG = {
     fields: [
       { id: 'selector', label: 'CSS Selector', type: 'text', placeholder: 'e.g. input#username, .email-field' },
       { id: 'value', label: 'Text to Type', type: 'text', placeholder: 'Enter text value...' },
+      { id: 'pressEnter', label: 'Press Enter after typing', type: 'checkbox', default: true },
     ],
   },
   read: {
@@ -29,7 +30,7 @@ const ACTION_CONFIG = {
     icon: '⏳',
     fields: [
       { id: 'selector', label: 'CSS Selector', type: 'text', placeholder: 'e.g. .loading-done, #results' },
-      { id: 'timeout', label: 'Timeout (ms)', type: 'number', placeholder: '5000' },
+      { id: 'timeout', label: 'Timeout (s)', type: 'number', placeholder: '5' },
     ],
   },
   navigate: {
@@ -41,7 +42,7 @@ const ACTION_CONFIG = {
   delay: {
     icon: '⏱️',
     fields: [
-      { id: 'ms', label: 'Duration (ms)', type: 'number', placeholder: '1000' },
+      { id: 'ms', label: 'Duration (s)', type: 'number', placeholder: '1' },
     ],
   },
 };
@@ -90,6 +91,18 @@ function renderActionFields() {
           </button>
         </div>
       `;
+    } else if (field.type === 'checkbox') {
+      row.className = 'form-row checkbox-row';
+      row.innerHTML = `
+        <label class="checkbox-container">
+          <input
+            type="checkbox"
+            id="field-${field.id}"
+            ${field.default ? 'checked' : ''}
+          />
+          <span class="checkbox-label">${field.label}</span>
+        </label>
+      `;
     } else {
       row.innerHTML = `
         <label for="field-${field.id}">${field.label}</label>
@@ -128,13 +141,22 @@ $btnAdd.addEventListener('click', () => {
   let valid = true;
   config.fields.forEach((field) => {
     const input = document.getElementById(`field-${field.id}`);
-    const val = input.value.trim();
-    if (!val) {
-      input.style.borderColor = 'var(--color-danger)';
-      valid = false;
-      setTimeout(() => (input.style.borderColor = ''), 1500);
+    if (field.type === 'checkbox') {
+      params[field.id] = input.checked;
     } else {
-      params[field.id] = field.type === 'number' ? parseInt(val, 10) : val;
+      const val = input.value.trim();
+      if (!val) {
+        input.style.borderColor = 'var(--color-danger)';
+        valid = false;
+        setTimeout(() => (input.style.borderColor = ''), 1500);
+      } else {
+        let numericVal = parseInt(val, 10);
+        // Convert seconds to ms for specific fields
+        if (field.id === 'ms' || field.id === 'timeout') {
+          numericVal = numericVal * 1000;
+        }
+        params[field.id] = field.type === 'number' ? numericVal : val;
+      }
     }
   });
 
@@ -207,6 +229,7 @@ $btnRun.addEventListener('click', async () => {
   }));
 
   addLog('info', `▶ Running task with ${taskActions.length} action(s)...`);
+  console.log('[DEBUG] Task Actions:', taskActions);
   const result = await window.electronAPI.executeTask(taskActions);
 
   if (!result.sent) {

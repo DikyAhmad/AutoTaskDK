@@ -6,10 +6,28 @@ let ws = null;
 let reconnectTimer = null;
 const WS_URL = 'ws://localhost:8765';
 const RECONNECT_INTERVAL = 3000;
+const KEEPALIVE_ALARM = 'ws-keepalive';
+
+// ─── Keepalive (prevent service worker termination) ──
+chrome.alarms.create(KEEPALIVE_ALARM, { periodInMinutes: 0.4 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === KEEPALIVE_ALARM) {
+    // Just keep the service worker alive
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      connect();
+    }
+  }
+});
 
 // ─── WebSocket Connection ───────────────────────────
 function connect() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
+
+  // Clean up any existing connection
+  if (ws) {
+    try { ws.close(); } catch (e) {}
+    ws = null;
+  }
 
   try {
     ws = new WebSocket(WS_URL);
@@ -30,9 +48,9 @@ function connect() {
         } else if (msg.type === 'execute-task') {
           await executeTask(msg.actions);
         } else if (msg.type === 'start-picker') {
-          // Send picker command to content script on active tab
           const tab = await getActiveTab();
           if (tab) {
+            await ensureContentScript(tab.id);
             chrome.tabs.sendMessage(tab.id, { type: 'start-picker' });
           }
         }
@@ -48,12 +66,13 @@ function connect() {
       scheduleReconnect();
     };
 
-    ws.onerror = (err) => {
-      console.error('[AutoClick] WS Error:', err);
-      ws?.close();
+    ws.onerror = () => {
+      // Don't log error object (it's not serializable in service workers)
+      console.log('[AutoClick] WS connection error');
+      try { ws?.close(); } catch (e) {}
     };
   } catch (err) {
-    console.error('[AutoClick] Connection error:', err);
+    console.error('[AutoClick] Connection error:', err.message);
     scheduleReconnect();
   }
 }
@@ -83,6 +102,28 @@ async function getActiveTab() {
   return tab;
 }
 
+// ─── Ensure Content Script Is Injected ──────────────
+async function ensureContentScript(tabId) {
+  try {
+    // Try sending a ping to check if content script is loaded
+    const reply = await chrome.tabs.sendMessage(tabId, { type: 'ping' });
+    if (reply && reply.pong) return; // Already loaded
+  } catch {
+    // Content script not loaded — inject it programmatically
+    console.log('[AutoClick] Injecting content script into tab', tabId);
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content.js'],
+      });
+      // Wait for content script to initialize
+      await new Promise((r) => setTimeout(r, 300));
+    } catch (err) {
+      console.error('[AutoClick] Failed to inject content script:', err.message);
+    }
+  }
+}
+
 // ─── Execute Single Action ──────────────────────────
 async function executeAction(action) {
   try {
@@ -106,13 +147,20 @@ async function executeAction(action) {
       return;
     }
 
+    // Ensure content script is loaded before sending DOM actions
+    await ensureContentScript(tab.id);
+
     // Send to content script for DOM actions
     const response = await chrome.tabs.sendMessage(tab.id, {
       type: 'execute',
       action,
     });
 
-    sendToElectron({ type: 'result', ...response });
+    if (response) {
+      sendToElectron({ type: 'result', ...response });
+    } else {
+      sendToElectron({ type: 'result', action: action.type, success: false, error: 'No response from content script' });
+    }
   } catch (err) {
     sendToElectron({
       type: 'result',
@@ -157,7 +205,6 @@ async function executeTask(actions) {
             }
           };
           chrome.tabs.onUpdated.addListener(listener);
-          // Timeout safety
           setTimeout(() => {
             chrome.tabs.onUpdated.removeListener(listener);
             resolve();
@@ -169,11 +216,16 @@ async function executeTask(actions) {
         result = `${action.ms}ms`;
       } else {
         // DOM actions via content script
+        await ensureContentScript(tab.id);
+
         const response = await chrome.tabs.sendMessage(tab.id, {
           type: 'execute',
           action,
         });
 
+        if (!response) {
+          throw new Error('No response from content script — try refreshing the page');
+        }
         if (!response.success) {
           throw new Error(response.error || 'Action failed');
         }
@@ -190,7 +242,6 @@ async function executeTask(actions) {
         result,
       });
     } catch (err) {
-      // Progress: error
       sendToElectron({
         type: 'task-progress',
         step,
@@ -200,7 +251,6 @@ async function executeTask(actions) {
         error: err.message,
       });
 
-      // Stop task on error
       sendToElectron({
         type: 'task-error',
         error: `Failed at step ${step}: ${err.message}`,

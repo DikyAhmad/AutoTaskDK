@@ -1,11 +1,16 @@
 {
   "manifest_version": 3,
   "name": "auto-task-dk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Connects to Auto Click UI desktop app for browser automation",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"

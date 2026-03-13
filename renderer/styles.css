@@ -277,6 +277,34 @@ body {
   color: var(--color-text-dim);
 }
 
+.checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.checkbox-container {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.checkbox-container input {
+  width: 16px !important;
+  height: 16px !important;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--color-text) !important;
+}
+
 select,
 input[type="text"],
 input[type="number"] {
