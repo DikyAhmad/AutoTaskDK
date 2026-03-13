@@ -18,6 +18,7 @@
   --color-danger-glow: rgba(255, 107, 107, 0.3);
   --color-warning: #fdcb6e;
   --color-info: #74b9ff;
+  --color-gradient-purple: linear-gradient(135deg, #6c5ce7, #a29bfe);
 
   --color-text: #e8e8f0;
   --color-text-dim: #8888aa;
@@ -84,7 +85,7 @@ body {
 }
 
 body {
-  background: var(--color-bg);
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a4a 100%);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -123,7 +124,10 @@ body {
 }
 
 .titlebar-icon {
-  font-size: 16px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px var(--color-primary-glow));
 }
 
 .titlebar-title {
@@ -304,7 +308,7 @@ body {
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
+  margin: 10px 0 6px 0;
 }
 
 .checkbox-container {
@@ -331,7 +335,8 @@ body {
 select,
 input[type="text"],
 input[type="number"],
-input[list] {
+input[list],
+textarea {
   background: var(--color-input-bg);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
@@ -342,6 +347,11 @@ input[list] {
   outline: none;
   transition: var(--transition);
   width: 100%;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
 }
 
 select:focus,
@@ -613,6 +623,10 @@ select option {
 .form-actions {
   display: flex;
   gap: 10px;
+}
+
+.form-actions .btn {
+  flex: 1;
 }
 
 .btn-cancel {

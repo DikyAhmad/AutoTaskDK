@@ -18,7 +18,9 @@ const ACTION_CONFIG = {
     icon: '⌨️',
     fields: [
       { id: 'selector', label: 'CSS Selector', type: 'text', placeholder: 'e.g. input#username, .email-field' },
-      { id: 'value', label: 'Text to Type', type: 'text', placeholder: 'Enter text value...' },
+      { id: 'isBulk', label: 'Bulk Mode (one action per line)', type: 'checkbox', default: false },
+      { id: 'bulkDelay', label: 'Delay between bulk inputs (s)', type: 'number', placeholder: '0' },
+      { id: 'value', label: 'Text to Type', type: 'textarea', placeholder: 'Enter text value...\nIn Bulk Mode, each line creates a new action.' },
       { id: 'pressEnter', label: 'Press Enter after typing', type: 'checkbox', default: true },
     ],
   },
@@ -127,6 +129,15 @@ function renderActionFields() {
           <span class="checkbox-label">${field.label}</span>
         </label>
       `;
+    } else if (field.type === 'textarea') {
+      row.innerHTML = `
+        <label for="field-${field.id}">${field.label}</label>
+        <textarea
+          id="field-${field.id}"
+          placeholder="${field.placeholder}"
+          autocomplete="off"
+        ></textarea>
+      `;
     } else {
       row.innerHTML = `
         <label for="field-${field.id}">${field.label}</label>
@@ -175,7 +186,7 @@ $btnAdd.addEventListener('click', () => {
       } else {
         let numericVal = parseInt(val, 10);
         // Convert seconds to ms for specific fields
-        if (field.id === 'ms' || field.id === 'timeout') {
+        if (field.id === 'ms' || field.id === 'timeout' || field.id === 'bulkDelay') {
           numericVal = numericVal * 1000;
         }
         params[field.id] = field.type === 'number' ? numericVal : val;
@@ -191,13 +202,66 @@ $btnAdd.addEventListener('click', () => {
   if (!valid) return;
 
   if (editingIndex !== null) {
+    // Handle Bulk Mode for 'type' action
+    if (type === 'type' && params.isBulk) {
+      const lines = params.value.split('\n').map(l => l.trim()).filter(l => l);
+      if (lines.length > 0) {
+        lines.forEach((line, idx) => {
+          const bp = { ...params, value: line };
+          delete bp.isBulk;
+          delete bp.bulkDelay;
+          
+          if (idx === 0) {
+            actions[editingIndex] = { type, params: bp, icon: config.icon };
+          } else {
+            // Add delay if requested
+            if (params.bulkDelay > 0) {
+              actions.push({ type: 'delay', params: { ms: params.bulkDelay }, icon: ACTION_CONFIG.delay.icon });
+            }
+            actions.push({ type, params: bp, icon: config.icon });
+          }
+        });
+        addLog('info', `Successfully updated and added ${lines.length - 1} bulk actions`);
+        cancelEdit();
+        renderActionList();
+        clearFormFields();
+        return;
+      }
+    }
+    if (params.isBulk !== undefined) delete params.isBulk;
+    if (params.bulkDelay !== undefined) delete params.bulkDelay;
     // Update existing action
     actions[editingIndex] = { type, params, icon: config.icon };
     addLog('info', `󰄬 Updated action ${editingIndex + 1}: ${type}`);
     cancelEdit(); // Reset editing state
   } else {
+    // Handle Bulk Mode for 'type' action
+    if (type === 'type' && params.isBulk) {
+      const lines = params.value.split('\n').map(l => l.trim()).filter(l => l);
+      if (lines.length > 0) {
+        lines.forEach((line, idx) => {
+          const bp = { ...params, value: line };
+          delete bp.isBulk;
+          delete bp.bulkDelay;
+          
+          // Add delay EXCEPT before the first item
+          if (idx > 0 && params.bulkDelay > 0) {
+            actions.push({ type: 'delay', params: { ms: params.bulkDelay }, icon: ACTION_CONFIG.delay.icon });
+          }
+          
+          actions.push({ type, params: bp, icon: config.icon });
+        });
+        addLog('success', `Successfully added ${lines.length} bulk actions`);
+        renderActionList();
+        clearFormFields();
+        return;
+      }
+    }
+    if (params.isBulk !== undefined) delete params.isBulk;
+    if (params.bulkDelay !== undefined) delete params.bulkDelay;
     // Add new action
     actions.push({ type, params, icon: config.icon });
+    addLog('success', `󰄬 Added action: ${type}`);
   }
 
   renderActionList();
