@@ -29,6 +29,12 @@ function connect() {
           await executeAction(msg.action);
         } else if (msg.type === 'execute-task') {
           await executeTask(msg.actions);
+        } else if (msg.type === 'start-picker') {
+          // Send picker command to content script on active tab
+          const tab = await getActiveTab();
+          if (tab) {
+            chrome.tabs.sendMessage(tab.id, { type: 'start-picker' });
+          }
         }
       } catch (err) {
         console.error('[AutoClick] Message parse error:', err);
@@ -208,7 +214,7 @@ async function executeTask(actions) {
   sendToElectron({ type: 'task-complete', total });
 }
 
-// ─── Message Listener (from popup) ──────────────────
+// ─── Message Listener (from popup & content script) ─
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'get-status') {
     sendResponse({
@@ -221,6 +227,24 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     connect();
     sendResponse({ ok: true });
     return true;
+  }
+
+  // Relay picker results from content script to Electron
+  if (msg.type === 'picker-result') {
+    sendToElectron({
+      type: 'picker-result',
+      selector: msg.selector,
+      tag: msg.tag,
+      text: msg.text,
+      id: msg.id,
+      classes: msg.classes,
+    });
+    return;
+  }
+
+  if (msg.type === 'picker-cancelled') {
+    sendToElectron({ type: 'picker-cancelled' });
+    return;
   }
 });
 

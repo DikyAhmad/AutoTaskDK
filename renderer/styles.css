@@ -312,6 +312,51 @@ select option {
   color: var(--color-text);
 }
 
+/* ─── Pick Button ───────────────────────────────────── */
+.input-with-pick {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.input-with-pick input {
+  flex: 1;
+}
+
+.btn-pick {
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.btn-pick:hover {
+  background: var(--color-primary-glow);
+  border-color: var(--color-primary);
+  color: var(--color-primary-light);
+  box-shadow: 0 0 12px var(--color-primary-glow);
+}
+
+.btn-pick.picking {
+  background: var(--color-primary-glow);
+  border-color: var(--color-primary);
+  color: var(--color-primary-light);
+  animation: pickerPulse 1.5s infinite;
+}
+
+@keyframes pickerPulse {
+  0%, 100% { box-shadow: 0 0 8px var(--color-primary-glow); }
+  50% { box-shadow: 0 0 20px var(--color-primary-glow); }
+}
+
 /* ─── Buttons ───────────────────────────────────────── */
 .btn {
   display: inline-flex;

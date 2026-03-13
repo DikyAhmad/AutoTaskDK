@@ -50,7 +50,11 @@ function startWebSocketServer() {
         console.log(`[WS] Received:`, msg);
 
         // Forward results to renderer
-        mainWindow?.webContents.send("action-result", msg);
+        if (msg.type === 'picker-result' || msg.type === 'picker-cancelled') {
+          mainWindow?.webContents.send(msg.type, msg);
+        } else {
+          mainWindow?.webContents.send("action-result", msg);
+        }
       } catch (err) {
         console.error("[WS] Parse error:", err);
       }
@@ -94,6 +98,22 @@ ipcMain.handle("execute-action", async (_event, action) => {
 // Execute a full task (list of actions)
 ipcMain.handle("execute-task", async (_event, actions) => {
   const payload = JSON.stringify({ type: "execute-task", actions });
+  let sent = false;
+
+  for (const [, ws] of connectedClients) {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(payload);
+      sent = true;
+      break;
+    }
+  }
+
+  return { sent };
+});
+
+// Start element picker in extension
+ipcMain.handle("start-picker", async () => {
+  const payload = JSON.stringify({ type: "start-picker" });
   let sent = false;
 
   for (const [, ws] of connectedClients) {

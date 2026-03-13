@@ -5,6 +5,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   executeAction: (action) => ipcRenderer.invoke('execute-action', action),
   executeTask: (actions) => ipcRenderer.invoke('execute-task', actions),
 
+  // Element picker
+  startPicker: () => ipcRenderer.invoke('start-picker'),
+
   // Status
   getStatus: () => ipcRenderer.invoke('get-status'),
 
@@ -19,5 +22,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onActionResult: (callback) => {
     ipcRenderer.on('action-result', (_event, data) => callback(data));
+  },
+  onPickerResult: (callback) => {
+    ipcRenderer.on('picker-result', (_event, data) => callback(data));
+  },
+  onPickerCancelled: (callback) => {
+    ipcRenderer.on('picker-cancelled', (_event) => callback());
   },
 });

@@ -1,6 +1,8 @@
 // ─── State ──────────────────────────────────────────
 let actions = [];
 let isConnected = false;
+let isPickerActive = false;
+let pickerTargetFieldId = null;
 
 // ─── Action Field Definitions ───────────────────────
 const ACTION_CONFIG = {
@@ -71,16 +73,46 @@ function renderActionFields() {
   config.fields.forEach((field) => {
     const row = document.createElement('div');
     row.className = 'form-row';
-    row.innerHTML = `
-      <label for="field-${field.id}">${field.label}</label>
-      <input
-        type="${field.type}"
-        id="field-${field.id}"
-        placeholder="${field.placeholder}"
-        autocomplete="off"
-      />
-    `;
+
+    if (field.id === 'selector') {
+      // Add pick button next to selector fields
+      row.innerHTML = `
+        <label for="field-${field.id}">${field.label}</label>
+        <div class="input-with-pick">
+          <input
+            type="${field.type}"
+            id="field-${field.id}"
+            placeholder="${field.placeholder}"
+            autocomplete="off"
+          />
+          <button type="button" class="btn-pick" id="btn-pick-${field.id}" title="Pick element from page">
+            🎯
+          </button>
+        </div>
+      `;
+    } else {
+      row.innerHTML = `
+        <label for="field-${field.id}">${field.label}</label>
+        <input
+          type="${field.type}"
+          id="field-${field.id}"
+          placeholder="${field.placeholder}"
+          autocomplete="off"
+        />
+      `;
+    }
+
     $actionFields.appendChild(row);
+  });
+
+  // Attach pick button handlers
+  config.fields.forEach((field) => {
+    if (field.id === 'selector') {
+      const pickBtn = document.getElementById(`btn-pick-${field.id}`);
+      if (pickBtn) {
+        pickBtn.addEventListener('click', () => startPicker(field.id));
+      }
+    }
   });
 }
 
@@ -277,3 +309,59 @@ window.electronAPI.onActionResult((data) => {
   updateConnectionUI();
   updateRunButton();
 })();
+
+// ─── Element Picker ─────────────────────────────────
+async function startPicker(fieldId) {
+  if (!isConnected) {
+    addLog('error', '✕ Cannot pick — no extension connected');
+    return;
+  }
+
+  isPickerActive = true;
+  pickerTargetFieldId = fieldId;
+  addLog('info', '🎯 Picker mode active — click an element in the browser');
+
+  // Update pick button state
+  const pickBtn = document.getElementById(`btn-pick-${fieldId}`);
+  if (pickBtn) {
+    pickBtn.classList.add('picking');
+    pickBtn.textContent = '⏳';
+  }
+
+  const result = await window.electronAPI.startPicker();
+  if (!result.sent) {
+    addLog('error', '✕ Failed to start picker — extension not responding');
+    resetPickerButton();
+  }
+}
+
+function resetPickerButton() {
+  isPickerActive = false;
+  const pickBtn = document.getElementById(`btn-pick-${pickerTargetFieldId}`);
+  if (pickBtn) {
+    pickBtn.classList.remove('picking');
+    pickBtn.textContent = '🎯';
+  }
+  pickerTargetFieldId = null;
+}
+
+window.electronAPI.onPickerResult((data) => {
+  addLog('success', `✓ Picked: <${data.tag}> → ${data.selector}`);
+
+  // Fill the selector input with the picked selector
+  if (pickerTargetFieldId) {
+    const input = document.getElementById(`field-${pickerTargetFieldId}`);
+    if (input) {
+      input.value = data.selector;
+      input.style.borderColor = 'var(--color-success)';
+      setTimeout(() => (input.style.borderColor = ''), 2000);
+    }
+  }
+
+  resetPickerButton();
+});
+
+window.electronAPI.onPickerCancelled(() => {
+  addLog('warning', '⚠ Picker cancelled');
+  resetPickerButton();
+});
