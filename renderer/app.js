@@ -201,62 +201,51 @@ $btnAdd.addEventListener('click', () => {
 
   if (!valid) return;
 
-  if (editingIndex !== null) {
-    // Handle Bulk Mode for 'type' action
-    if (type === 'type' && params.isBulk) {
-      const lines = params.value.split('\n').map(l => l.trim()).filter(l => l);
-      if (lines.length > 0) {
-        lines.forEach((line, idx) => {
-          const bp = { ...params, value: line };
-          delete bp.isBulk;
-          delete bp.bulkDelay;
-          
-          if (idx === 0) {
-            actions[editingIndex] = { type, params: bp, icon: config.icon };
-          } else {
-            // Add delay if requested
-            if (params.bulkDelay > 0) {
-              actions.push({ type: 'delay', params: { ms: params.bulkDelay }, icon: ACTION_CONFIG.delay.icon });
-            }
-            actions.push({ type, params: bp, icon: config.icon });
-          }
-        });
-        addLog('info', `Successfully updated and added ${lines.length - 1} bulk actions`);
+  // Handle Bulk Mode for 'type' action
+  if (type === 'type' && params.isBulk) {
+    const lines = params.value.split('\n').map(l => l.trim()).filter(l => l);
+    
+    if (lines.length > 0) {
+      const bulkActions = [];
+      lines.forEach((line, idx) => {
+        const bp = { ...params, value: line };
+        delete bp.isBulk;
+        delete bp.bulkDelay;
+        
+        // Add delay EXCEPT before the first item of a NEW bulk set
+        // (If editing, we might want delay even for the first item if it's not the first in the list, 
+        // but let's keep it simple: delay between items in this bulk set)
+        if (idx > 0 && params.bulkDelay > 0) {
+          bulkActions.push({ type: 'delay', params: { ms: params.bulkDelay }, icon: ACTION_CONFIG.delay.icon });
+        }
+        bulkActions.push({ type, params: bp, icon: config.icon });
+      });
+
+      if (editingIndex !== null) {
+        // Replace current item and insert the rest
+        actions.splice(editingIndex, 1, ...bulkActions);
+        addLog('info', `󰄬 Updated and processed bulk actions at position ${editingIndex + 1}`);
         cancelEdit();
-        renderActionList();
-        clearFormFields();
-        return;
+      } else {
+        // Add all as new actions
+        actions.push(...bulkActions);
+        addLog('success', `󰄬 Added ${lines.length} bulk actions`);
       }
+      renderActionList();
+      clearFormFields();
+      updateRunButton();
+      return;
     }
+  }
+
+  if (editingIndex !== null) {
     if (params.isBulk !== undefined) delete params.isBulk;
     if (params.bulkDelay !== undefined) delete params.bulkDelay;
     // Update existing action
     actions[editingIndex] = { type, params, icon: config.icon };
     addLog('info', `󰄬 Updated action ${editingIndex + 1}: ${type}`);
-    cancelEdit(); // Reset editing state
+    cancelEdit();
   } else {
-    // Handle Bulk Mode for 'type' action
-    if (type === 'type' && params.isBulk) {
-      const lines = params.value.split('\n').map(l => l.trim()).filter(l => l);
-      if (lines.length > 0) {
-        lines.forEach((line, idx) => {
-          const bp = { ...params, value: line };
-          delete bp.isBulk;
-          delete bp.bulkDelay;
-          
-          // Add delay EXCEPT before the first item
-          if (idx > 0 && params.bulkDelay > 0) {
-            actions.push({ type: 'delay', params: { ms: params.bulkDelay }, icon: ACTION_CONFIG.delay.icon });
-          }
-          
-          actions.push({ type, params: bp, icon: config.icon });
-        });
-        addLog('success', `Successfully added ${lines.length} bulk actions`);
-        renderActionList();
-        clearFormFields();
-        return;
-      }
-    }
     if (params.isBulk !== undefined) delete params.isBulk;
     if (params.bulkDelay !== undefined) delete params.bulkDelay;
     // Add new action

@@ -106,7 +106,7 @@ ipcMain.handle("execute-task", async (_event, actions) => {
     if (ws.readyState === ws.OPEN) {
       ws.send(payload);
       sent = true;
-      break;
+
     }
   }
 
@@ -122,7 +122,7 @@ ipcMain.handle("start-picker", async () => {
     if (ws.readyState === ws.OPEN) {
       ws.send(payload);
       sent = true;
-      break;
+
     }
   }
 
