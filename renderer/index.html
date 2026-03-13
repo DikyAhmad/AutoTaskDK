@@ -10,106 +10,146 @@
       rel="stylesheet"
     />
   </head>
-  <body>
+  <body class="bg-transparent rounded-xl overflow-hidden font-main text-text text-sm select-none h-full">
     <!-- Titlebar -->
-    <header id="titlebar">
-      <div class="titlebar-drag">
-        <img src="icon.png" class="titlebar-icon" alt="Logo" />
-        <span class="titlebar-title">AutoTaskDK</span>
+    <header id="titlebar" class="flex justify-between items-center h-10 px-3 bg-bg border-b border-border [app-region:drag]">
+      <div class="titlebar-drag flex items-center gap-2">
+        <img src="icon.png" class="titlebar-icon w-[18px] h-[18px] object-contain drop-shadow-[0_0_4px_var(--color-primary-glow)]" alt="Logo" />
+        <span class="titlebar-title text-[13px] font-semibold text-text-dim tracking-wider">AutoTaskDK</span>
       </div>
-      <div class="titlebar-controls">
-        <button id="btn-theme" class="titlebar-btn" title="Toggle Light/Dark Mode">
-          ☀️
-        </button>
-        <button id="btn-minimize" class="titlebar-btn" title="Minimize">
-          ─
-        </button>
-        <button id="btn-maximize" class="titlebar-btn" title="Maximize">
-          ☐
-        </button>
-        <button id="btn-close" class="titlebar-btn btn-close" title="Close">
-          ✕
-        </button>
+      <div class="titlebar-controls flex gap-1 [app-region:no-drag]">
+        <button id="btn-theme" class="titlebar-btn w-8 h-7 flex items-center justify-center bg-transparent border-none text-text-dim text-xs rounded-md cursor-pointer transition-colors duration-200 hover:bg-surface-hover hover:text-text" title="Toggle Light/Dark Mode">☀️</button>
+        <button id="btn-minimize" class="titlebar-btn w-8 h-7 flex items-center justify-center bg-transparent border-none text-text-dim text-xs rounded-md cursor-pointer transition-colors duration-200 hover:bg-surface-hover hover:text-text" title="Minimize">─</button>
+        <button id="btn-maximize" class="titlebar-btn w-8 h-7 flex items-center justify-center bg-transparent border-none text-text-dim text-xs rounded-md cursor-pointer transition-colors duration-200 hover:bg-surface-hover hover:text-text" title="Maximize">☐</button>
+        <button id="btn-close" class="titlebar-btn w-8 h-7 flex items-center justify-center bg-transparent border-none text-text-dim text-xs rounded-md cursor-pointer transition-colors duration-200 hover:bg-surface-hover hover:text-text hover:bg-danger hover:text-white" title="Close">✕</button>
       </div>
     </header>
 
-    <main id="app">
+    <main id="app" class="flex flex-col h-[calc(100vh-40px)] p-3 gap-3">
       <!-- Status Bar -->
-      <div id="status-bar">
-        <div id="connection-status" class="status-disconnected">
+      <div id="status-bar" class="flex !flex-row items-center justify-between px-4 py-2 bg-surface/50 border border-border rounded-md transition-all shadow-sm">
+        <div id="connection-status" class="flex items-center gap-2.5 font-bold text-[13px] status-disconnected">
           <span class="status-dot"></span>
           <span id="status-text">Disconnected</span>
         </div>
-        <span id="status-info">Install browser extension & refresh</span>
+        <span id="status-info" class="text-xs text-text-muted font-medium">Install browser extension & refresh</span>
       </div>
 
       <!-- Two-column layout -->
-      <div id="workspace">
+      <div id="workspace" class="grid grid-cols-2 gap-3 flex-1 min-h-0">
         <!-- Left: Task Builder -->
         <section id="task-panel" class="glass-panel">
-          <h2>📋 Task Builder</h2>
+          <h2 class="text-base font-bold text-text tracking-tight flex items-center gap-2 mb-2">📋 Task Builder</h2>
 
-          <!-- Add action form -->
-          <div id="action-form" class="glass-card">
-            <div class="form-row">
-              <label for="action-type">Action</label>
-              <select id="action-type">
-                <option value="click">🖱️ Click</option>
-                <option value="type">⌨️ Type</option>
-                <option value="read">📖 Read</option>
-                <option value="wait">⏳ Wait</option>
-                <option value="navigate">🔗 Navigate</option>
-                <option value="delay">⏱️ Delay</option>
-              </select>
+          <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-2">
+            <!-- Project Manager -->
+            <div id="project-manager" class="glass-card">
+              <div class="form-row">
+                <label for="project-selector">Active Project</label>
+                <div class="project-controls flex items-center gap-2">
+                  <select id="project-selector" class="flex-1 min-h-[40px]">
+                    <option value="">-- No Project --</option>
+                  </select>
+                  <div class="project-btns flex gap-1">
+                    <button id="btn-new-project" class="btn-icon w-9 h-9 flex items-center justify-center bg-surface border border-border rounded-sm hover:bg-surface-hover hover:scale-105 active:scale-95 transition-all" title="New Project">➕</button>
+                    <button id="btn-rename-project" class="btn-icon w-9 h-9 flex items-center justify-center bg-surface border border-border rounded-sm hover:bg-surface-hover hover:scale-105 active:scale-95 transition-all" title="Rename Project">✏️</button>
+                    <button id="btn-save-project" class="btn-icon w-9 h-9 flex items-center justify-center bg-surface border border-border rounded-sm hover:bg-surface-hover hover:scale-105 active:scale-95 transition-all" title="Save Project">💾</button>
+                    <button id="btn-delete-project" class="btn-icon w-9 h-9 flex items-center justify-center bg-surface border border-border rounded-sm hover:bg-danger-glow hover:text-danger hover:border-danger hover:scale-105 active:scale-95 transition-all text-text-dim" title="Delete Project">🗑️</button>
+                  </div>
+                </div>
+              </div>
+              <div id="project-rename-container" class="hidden mt-3 pt-3 border-t border-border space-y-2">
+                <label for="project-rename-input">New Name</label>
+                <div class="flex items-center gap-2">
+                  <input type="text" id="project-rename-input" class="flex-1" placeholder="Enter project name..." />
+                  <button id="btn-rename-confirm" class="btn-icon w-9 h-9 flex items-center justify-center bg-primary/20 border border-primary/30 text-primary-light rounded-sm hover:bg-primary/30" title="Confirm">✔</button>
+                  <button id="btn-rename-cancel" class="btn-icon w-9 h-9 flex items-center justify-center bg-surface border border-border rounded-sm hover:bg-surface-hover" title="Cancel">✕</button>
+                </div>
+              </div>
             </div>
 
-            <!-- Dynamic fields rendered by JS -->
-            <div id="action-fields"></div>
+            <!-- Add action form -->
+            <div id="action-form" class="glass-card mt-1">
+              <div class="form-row">
+                <label for="action-type">Action</label>
+                <select id="action-type" class="w-full">
+                  <option value="click">🖱️ Click</option>
+                  <option value="type">⌨️ Type</option>
+                  <option value="read">📖 Read</option>
+                  <option value="wait">⏳ Wait</option>
+                  <option value="navigate">🔗 Navigate</option>
+                  <option value="delay">⏱️ Delay</option>
+                </select>
+              </div>
 
-            <div class="form-actions">
-              <button id="btn-add-action" class="btn btn-primary">
-                <span>＋</span> Add Action
-              </button>
-              <button id="btn-cancel-edit" class="btn btn-ghost btn-cancel">
-                Cancel
-              </button>
+              <!-- Action Fields Container -->
+              <div id="action-fields" class="flex flex-col gap-3 mt-1"></div>
+
+              <div class="form-actions flex gap-3 mt-4">
+                <button id="btn-add-action" class="btn btn-primary flex-1 py-3 bg-gradient-to-br from-primary to-[#8b7cf7] text-white font-bold rounded-md shadow-[0_4px_15px_rgba(108,92,231,0.4)] hover:shadow-[0_6px_20px_rgba(108,92,231,0.6)] hover:-translate-y-0.5 active:translate-y-0 transition-all">
+                  <span>＋</span> Add Action
+                </button>
+                <button id="btn-cancel-edit" class="btn btn-ghost btn-cancel hidden flex-1 py-3 bg-transparent border border-border text-text-dim rounded-md hover:bg-surface-hover hover:text-text transition-all font-semibold">
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
-
-          <!-- Action list -->
-          <div id="action-list">
-            <div id="empty-state" class="empty-state">
-              <span>🎯</span>
-              <p>No actions yet. Add your first action above.</p>
-            </div>
-          </div>
-
-          <!-- Controls -->
-          <div id="task-controls">
-            <button id="btn-run" class="btn btn-success" disabled>
-              ▶ Run Task
-            </button>
-            <button id="btn-clear" class="btn btn-ghost">🗑️ Clear All</button>
           </div>
         </section>
 
-        <!-- Right: Log Viewer -->
-        <section id="log-panel" class="glass-panel">
-          <div class="panel-header">
-            <h2>📊 Logs</h2>
-            <button id="btn-clear-logs" class="btn btn-ghost btn-sm">
-              Clear
-            </button>
-          </div>
-          <div id="log-list">
-            <div class="log-empty">Waiting for actions…</div>
-          </div>
-        </section>
+        <!-- Right: Action List & Log Workspace -->
+        <div id="right-workspace" class="grid grid-rows-[1fr_200px] gap-3 min-h-0">
+          <!-- Action List Section -->
+          <section id="list-panel" class="glass-panel">
+            <div class="flex justify-between items-center mb-1">
+              <h2 class="text-base font-bold text-text tracking-tight flex items-center gap-2">📑 Action List</h2>
+              <button id="btn-clear" class="text-[11px] font-bold text-text-dim hover:text-danger uppercase tracking-widest transition-colors py-1 px-2">🗑️ Clear All</button>
+            </div>
+            
+            <div id="action-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-1 min-h-0">
+              <div id="empty-state" class="flex flex-col items-center justify-center gap-3 p-10 text-text-muted text-center animate-[modalFadeIn_0.5s_ease]">
+                <span class="text-[40px] opacity-30">🎯</span>
+                <p class="text-[13px] font-medium opacity-60">No actions yet. Add actions on the left.</p>
+              </div>
+            </div>
+
+            <!-- Run Button -->
+            <div id="task-controls" class="mt-2">
+              <button id="btn-run" class="w-full py-3.5 bg-gradient-to-br from-[#00b894] to-success text-bg font-bold rounded-md shadow-[0_4px_15px_rgba(0,184,148,0.4)] hover:shadow-[0_6px_20px_rgba(0,184,148,0.6)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center justify-center gap-2" disabled>
+                ▶ Run Task
+              </button>
+            </div>
+          </section>
+
+          <!-- Log Viewer Section -->
+          <section id="log-panel" class="glass-panel overflow-hidden">
+            <div class="panel-header flex justify-between items-center mb-2">
+              <h2 class="text-base font-bold text-text tracking-tight flex items-center gap-2">📊 Logs</h2>
+              <button id="btn-clear-logs" class="text-[11px] font-bold text-text-dim hover:text-text uppercase tracking-widest transition-colors">Clear</button>
+            </div>
+            <div id="log-list" class="flex-1 overflow-y-auto flex flex-col gap-1 pr-1 font-mono text-[12px] min-h-0">
+              <div class="flex items-center justify-center h-full text-text-muted opacity-50 italic">Waiting for activity…</div>
+            </div>
+          </section>
+        </div>
       </div>
-    </main>
+    </div>
+  </main>
 
-    <datalist id="selector-history-list"></datalist>
+  <datalist id="selector-history-list"></datalist>
 
-    <script src="app.js"></script>
-  </body>
+  <!-- Custom Confirm Modal -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-content glass-card p-6 text-center max-w-[400px] w-[90%] shadow-2xl animate-[modalSlideUp_0.3s_cubic-bezier(0.34,1.56,0.64,1)]">
+      <h3 id="modal-title" class="text-[1.4em] font-bold text-text mb-3">Confirm Action</h3>
+      <p id="modal-message" class="text-text-dim leading-relaxed mb-6">Are you sure you want to proceed?</p>
+      <div class="modal-actions flex justify-center gap-3">
+        <button id="btn-modal-cancel" class="btn btn-ghost min-w-[120px]">Cancel</button>
+        <button id="btn-modal-confirm" class="btn btn-danger bg-danger text-white min-w-[120px] font-semibold rounded-md hover:bg-danger/90 transition-all">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
 </html>

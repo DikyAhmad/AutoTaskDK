@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+@theme {
+  /* ─── Design Tokens ─────────────────────────────────── */
+  --color-bg: #0a0a1a;
+  --color-bg-alt: #0f0f2a;
+  --color-surface: #1a1a2e;
+  --color-surface-hover: #252545;
+  --color-border: #2a2a4a;
+  --color-border-light: #3a3a60;
+
+  --color-primary: #6c5ce7;
+  --color-primary-light: #a29bfe;
+  --color-primary-glow: rgba(108, 92, 231, 0.3);
+  --color-input-bg: rgba(0, 0, 0, 0.3);
+  --color-input-focus-bg: rgba(0, 0, 0, 0.4);
+
+  --color-success: #00cec9;
+  --color-success-glow: rgba(0, 206, 201, 0.3);
+  --color-danger: #ff6b6b;
+  --color-danger-glow: rgba(255, 107, 107, 0.3);
+  --color-warning: #fdcb6e;
+  --color-info: #74b9ff;
+
+  --color-text: #e8e8f0;
+  --color-text-dim: #8888aa;
+  --color-text-muted: #555577;
+
+  --glass-bg: #1a1a2e;
+  --glass-blur: 0px;
+  --glass-border: #2a2a4a;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --font-main: "Inter", -apple-system, sans-serif;
+  
+  --animate-pulse-slow: pulse 2s infinite;
+  
+  /* Tailwind v4 automatically handles spacing, but we can add specific ones if needed */
+}
+
+@layer base {
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: var(--font-main);
+    color: var(--color-text);
+    font-size: 14px;
+    user-select: none;
+  }
+
+  body {
+    background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-alt) 100%);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .hidden { display: none !important; }
+
+  /* ─── Light Theme Overrides ─── */
+  :root.light-theme {
+    --color-bg: #f0f2f5;
+    --color-bg-alt: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f1f2f6;
+    --color-border: #dcdde1;
+    --color-border-light: #ced6e0;
+    --color-input-bg: #f5f6fa;
+    
+    --color-text: #2f3640;
+    --color-text-dim: #718093;
+    --color-text-muted: #95afc0;
+
+    --glass-bg: #ffffff;
+    --glass-border: #dcdde1;
+    
+    --color-primary-glow: rgba(108, 92, 231, 0.15);
+    --color-input-focus-bg: rgba(255, 255, 255, 0.95);
+  }
+
+  /* ─── Base Form Styles ─── */
+  select,
+  input[type="text"],
+  input[type="number"],
+  textarea {
+    background: var(--color-input-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--color-text);
+    font-family: var(--font-main);
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+
+  select:focus,
+  input:focus,
+  textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-glow);
+    background: var(--color-input-focus-bg);
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238888aa' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  option {
+    background-color: var(--color-bg-alt);
+    color: var(--color-text);
+  }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--color-text-dim);
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  /* ─── Helper Classes ─── */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .status-connected .status-dot {
+    background: var(--color-success);
+    box-shadow: 0 0 8px var(--color-success-glow);
+    animation: pulse 2s infinite;
+  }
+
+  .status-disconnected .status-dot {
+    background: var(--color-danger);
+    box-shadow: 0 0 8px var(--color-danger-glow);
+  }
+
+  .status-connected #status-text { color: var(--color-success); }
+  .status-disconnected #status-text { color: var(--color-danger); }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.3));
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
+  }
+
+  .glass-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s ease;
+  }
+
+  .glass-card:hover {
+    border-color: var(--color-border-light);
+    background: var(--color-surface-hover);
+  }
+
+  /* ─── Modals ─── */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    transition: all 0.3s ease;
+  }
+
+  .modal-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* ─── Buttons ─── */
+  .btn {
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 13px;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-dim);
+  }
+
+  .btn-ghost:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+
+  .btn-danger {
+    background: var(--color-danger);
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background: #ff5252;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--color-danger-glow);
+  }
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-surface-hover); }
+
+/* ─── Animations ─── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pickerPulse {
+  0%, 100% { box-shadow: 0 0 8px var(--color-primary-glow); }
+  50% { box-shadow: 0 0 20px var(--color-primary-glow); }
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

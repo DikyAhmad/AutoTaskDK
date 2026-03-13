@@ -52,7 +52,7 @@ function startWebSocketServer() {
         console.log(`[WS] Received:`, msg);
 
         // Forward results to renderer
-        if (msg.type === 'picker-result' || msg.type === 'picker-cancelled') {
+        if (msg.type === "picker-result" || msg.type === "picker-cancelled") {
           mainWindow?.webContents.send(msg.type, msg);
         } else {
           mainWindow?.webContents.send("action-result", msg);
@@ -106,7 +106,6 @@ ipcMain.handle("execute-task", async (_event, actions) => {
     if (ws.readyState === ws.OPEN) {
       ws.send(payload);
       sent = true;
-
     }
   }
 
@@ -122,7 +121,6 @@ ipcMain.handle("start-picker", async () => {
     if (ws.readyState === ws.OPEN) {
       ws.send(payload);
       sent = true;
-
     }
   }
 
@@ -149,7 +147,85 @@ ipcMain.handle("window-maximize", () => {
 ipcMain.handle("window-close", () => mainWindow?.close());
 
 // --- Persistence ---
-const tasksPath = path.join(app.getPath("userData"), "tasks.json");
+const userDataPath = app.getPath("userData");
+const tasksPath = path.join(userDataPath, "tasks.json");
+const projectsDir = path.join(userDataPath, "projects");
+
+// Ensure projects directory exists
+if (!fs.existsSync(projectsDir)) {
+  fs.mkdirSync(projectsDir, { recursive: true });
+}
+
+ipcMain.handle("get-projects", async () => {
+  try {
+    const files = fs.readdirSync(projectsDir);
+    return files
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => f.replace(".json", ""));
+  } catch (err) {
+    console.error("Failed to list projects:", err);
+    return [];
+  }
+});
+
+ipcMain.handle("save-project", async (_event, name, actions) => {
+  try {
+    const filePath = path.join(projectsDir, `${name}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(actions, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error(`Failed to save project ${name}:`, err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("load-project", async (_event, name) => {
+  try {
+    const filePath = path.join(projectsDir, `${name}.json`);
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, "utf-8");
+      return JSON.parse(data);
+    }
+    return null;
+  } catch (err) {
+    console.error(`Failed to load project ${name}:`, err);
+    return null;
+  }
+});
+
+ipcMain.handle("delete-project", async (_event, name) => {
+  try {
+    const filePath = path.join(projectsDir, `${name}.json`);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return { success: true };
+    }
+    return { success: false, error: "File not found" };
+  } catch (err) {
+    console.error(`Failed to delete project ${name}:`, err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("rename-project", async (_event, oldName, newName) => {
+  try {
+    const oldPath = path.join(projectsDir, `${oldName}.json`);
+    const newPath = path.join(projectsDir, `${newName}.json`);
+
+    if (!fs.existsSync(oldPath)) {
+      return { success: false, error: "Original project file not found" };
+    }
+    if (fs.existsSync(newPath)) {
+      return { success: false, error: "A project with this name already exists" };
+    }
+
+    fs.renameSync(oldPath, newPath);
+    return { success: true };
+  } catch (err) {
+    console.error(`Failed to rename project from ${oldName} to ${newName}:`, err);
+    return { success: false, error: err.message };
+  }
+});
 
 ipcMain.handle("save-tasks", async (_event, tasks) => {
   try {

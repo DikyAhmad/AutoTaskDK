@@ -5,6 +5,8 @@ let isPickerActive = false;
 let pickerTargetFieldId = null;
 let editingIndex = null;
 let selectorHistory = [];
+let currentProject = ""; // Name of the active project
+let projects = []; // List of available project names
 
 // ─── Action Field Definitions ───────────────────────
 const ACTION_CONFIG = {
@@ -19,7 +21,7 @@ const ACTION_CONFIG = {
     fields: [
       { id: 'selector', label: 'CSS Selector', type: 'text', placeholder: 'e.g. input#username, .email-field' },
       { id: 'isBulk', label: 'Bulk Mode (one action per line)', type: 'checkbox', default: false },
-      { id: 'bulkDelay', label: 'Delay between bulk inputs (s)', type: 'number', placeholder: '0' },
+      { id: 'bulkDelay', label: 'Delay between bulk inputs (s)', type: 'text', placeholder: 'e.g. 10 or 10-15' },
       { id: 'value', label: 'Text to Type', type: 'textarea', placeholder: 'Enter text value...\nIn Bulk Mode, each line creates a new action.' },
       { id: 'pressEnter', label: 'Press Enter after typing', type: 'checkbox', default: true },
     ],
@@ -46,7 +48,7 @@ const ACTION_CONFIG = {
   delay: {
     icon: '⏱️',
     fields: [
-      { id: 'ms', label: 'Duration (s)', type: 'number', placeholder: '1' },
+      { id: 'ms', label: 'Duration (s)', type: 'text', placeholder: 'e.g. 5 or 5-10' },
     ],
   },
 };
@@ -64,6 +66,26 @@ const $connectionStatus = document.getElementById('connection-status');
 const $statusText = document.getElementById('status-text');
 const $statusInfo = document.getElementById('status-info');
 
+// ─── Project DOM Refs ───────────────────────────────
+const $projectSelector = document.getElementById('project-selector');
+const $btnNewProject = document.getElementById('btn-new-project');
+const $btnRenameProject = document.getElementById('btn-rename-project');
+const $btnSaveProject = document.getElementById('btn-save-project');
+const $btnDeleteProject = document.getElementById('btn-delete-project');
+
+// ─── Rename Project UI Refs ──────────────────────────
+const $renameContainer = document.getElementById('project-rename-container');
+const $renameInput = document.getElementById('project-rename-input');
+const $btnRenameConfirm = document.getElementById('btn-rename-confirm');
+const $btnRenameCancel = document.getElementById('btn-rename-cancel');
+
+// ─── Modal Refs ─────────────────────────────────────
+const $confirmModal = document.getElementById('confirm-modal');
+const $modalTitle = document.getElementById('modal-title');
+const $modalMessage = document.getElementById('modal-message');
+const $btnModalConfirm = document.getElementById('btn-modal-confirm');
+const $btnModalCancel = document.getElementById('btn-modal-cancel');
+
 // ─── Window Controls ────────────────────────────────
 document.getElementById('btn-minimize').addEventListener('click', () => window.electronAPI.minimize());
 document.getElementById('btn-maximize').addEventListener('click', () => window.electronAPI.maximize());
@@ -76,9 +98,11 @@ function setTheme(theme) {
   if (theme === 'light') {
     document.documentElement.classList.add('light-theme');
     $btnTheme.textContent = '🌙';
+    $btnTheme.title = 'Switch to Dark Mode';
   } else {
     document.documentElement.classList.remove('light-theme');
     $btnTheme.textContent = '☀️';
+    $btnTheme.title = 'Switch to Light Mode';
   }
   localStorage.setItem('autotask-theme', theme);
 }
@@ -98,35 +122,37 @@ function renderActionFields() {
 
   config.fields.forEach((field) => {
     const row = document.createElement('div');
-    row.className = 'form-row';
+    row.className = 'form-row flex flex-col gap-1.5';
 
     if (field.id === 'selector') {
       // Add pick button next to selector fields
       row.innerHTML = `
         <label for="field-${field.id}">${field.label}</label>
-        <div class="input-with-pick">
+        <div class="input-with-pick flex gap-2 items-stretch h-[44px]">
           <input
             type="${field.type}"
             id="field-${field.id}"
             placeholder="${field.placeholder}"
             autocomplete="off"
             list="selector-history-list"
+            class="flex-1"
           />
-          <button type="button" class="btn-pick" id="btn-pick-${field.id}" title="Pick element from page">
+          <button type="button" class="btn-pick w-12 flex items-center justify-center bg-surface border border-border rounded-sm text-text-dim text-base cursor-pointer transition-all hover:bg-primary-glow hover:border-primary hover:text-primary-light hover:shadow-[0_0_15px_var(--color-primary-glow)] hover:scale-105 active:scale-95 shrink-0" id="btn-pick-${field.id}" title="Pick element from page">
             🎯
           </button>
         </div>
       `;
     } else if (field.type === 'checkbox') {
-      row.className = 'form-row checkbox-row';
+      row.className = 'form-row checkbox-row flex items-center gap-2.5 mt-2 mb-1 py-1';
       row.innerHTML = `
-        <label class="checkbox-container">
+        <label class="checkbox-container flex items-center gap-2.5 cursor-pointer select-none group">
           <input
             type="checkbox"
             id="field-${field.id}"
+            class="w-4.5 h-4.5 cursor-pointer accent-primary"
             ${field.default ? 'checked' : ''}
           />
-          <span class="checkbox-label">${field.label}</span>
+          <span class="checkbox-label text-[13px] font-semibold text-text group-hover:text-primary-light transition-colors">${field.label}</span>
         </label>
       `;
     } else if (field.type === 'textarea') {
@@ -136,6 +162,7 @@ function renderActionFields() {
           id="field-${field.id}"
           placeholder="${field.placeholder}"
           autocomplete="off"
+          class="min-h-[80px] resize-y p-3 leading-relaxed"
         ></textarea>
       `;
     } else {
@@ -146,6 +173,7 @@ function renderActionFields() {
           id="field-${field.id}"
           placeholder="${field.placeholder}"
           autocomplete="off"
+          class="h-[44px]"
         />
       `;
     }
@@ -162,6 +190,21 @@ function renderActionFields() {
       }
     }
   });
+}
+
+function parseDuration(val) {
+  if (!val) return 0;
+  const s = String(val).trim();
+  if (s.includes('-')) {
+    const parts = s.split('-').map(p => parseInt(p.trim(), 10)).filter(p => !isNaN(p));
+    if (parts.length >= 2) {
+      const min = Math.min(parts[0], parts[1]);
+      const max = Math.max(parts[0], parts[1]);
+      // Return ms
+      return Math.floor(Math.random() * (max - min + 1) + min) * 1000;
+    }
+  }
+  return (parseInt(s, 10) || 0) * 1000;
 }
 
 $actionType.addEventListener('change', renderActionFields);
@@ -184,12 +227,17 @@ $btnAdd.addEventListener('click', () => {
         valid = false;
         setTimeout(() => (input.style.borderColor = ''), 1500);
       } else {
-        let numericVal = parseInt(val, 10);
-        // Convert seconds to ms for specific fields
-        if (field.id === 'ms' || field.id === 'timeout' || field.id === 'bulkDelay') {
-          numericVal = numericVal * 1000;
+        // Special handling for potential ranges in duration fields
+        if (field.id === 'ms' || field.id === 'bulkDelay') {
+          // Store raw value for bulk processing later, OR parse now if not bulk
+          params[field.id] = val; 
+        } else {
+          let numericVal = parseInt(val, 10);
+          if (field.id === 'timeout') {
+            numericVal = numericVal * 1000;
+          }
+          params[field.id] = field.type === 'number' ? numericVal : val;
         }
-        params[field.id] = field.type === 'number' ? numericVal : val;
 
         // Add to history if it's a selector
         if (field.id === 'selector') {
@@ -213,10 +261,11 @@ $btnAdd.addEventListener('click', () => {
         delete bp.bulkDelay;
         
         // Add delay EXCEPT before the first item of a NEW bulk set
-        // (If editing, we might want delay even for the first item if it's not the first in the list, 
-        // but let's keep it simple: delay between items in this bulk set)
-        if (idx > 0 && params.bulkDelay > 0) {
-          bulkActions.push({ type: 'delay', params: { ms: params.bulkDelay }, icon: ACTION_CONFIG.delay.icon });
+        if (idx > 0 && params.bulkDelay) {
+          const delayMs = parseDuration(params.bulkDelay);
+          if (delayMs > 0) {
+            bulkActions.push({ type: 'delay', params: { ms: delayMs }, icon: ACTION_CONFIG.delay.icon });
+          }
         }
         bulkActions.push({ type, params: bp, icon: config.icon });
       });
@@ -239,8 +288,13 @@ $btnAdd.addEventListener('click', () => {
   }
 
   if (editingIndex !== null) {
-    if (params.isBulk !== undefined) delete params.isBulk;
     if (params.bulkDelay !== undefined) delete params.bulkDelay;
+    
+    // Randomize if standalone delay is being edited
+    if (type === 'delay' && params.ms) {
+      params.ms = parseDuration(params.ms);
+    }
+
     // Update existing action
     actions[editingIndex] = { type, params, icon: config.icon };
     addLog('info', `󰄬 Updated action ${editingIndex + 1}: ${type}`);
@@ -248,6 +302,12 @@ $btnAdd.addEventListener('click', () => {
   } else {
     if (params.isBulk !== undefined) delete params.isBulk;
     if (params.bulkDelay !== undefined) delete params.bulkDelay;
+    
+    // Final check for random delay in standalone action
+    if (type === 'delay' && params.ms) {
+      params.ms = parseDuration(params.ms);
+    }
+    
     // Add new action
     actions.push({ type, params, icon: config.icon });
     addLog('success', `󰄬 Added action: ${type}`);
@@ -265,8 +325,11 @@ function clearFormFields() {
 
 // ─── Render Action List ─────────────────────────────
 function renderActionList() {
-  // Save tasks whenever list changes
+  // Save tasks to "last session" fallback
   window.electronAPI.saveTasks(actions);
+  
+  // If we have an active project, we might want to auto-save or wait for manual save
+  // For now, let's keep it manual to avoid overwriting unless user clicks save
 
   if (actions.length === 0) {
     $actionList.innerHTML = `
@@ -287,16 +350,16 @@ function renderActionList() {
       const isEditing = editingIndex === i;
 
       return `
-        <div class="action-item ${isEditing ? 'editing' : ''}" data-index="${i}">
-          <span class="action-index">${i + 1}</span>
-          <span class="action-icon">${action.icon}</span>
-          <div class="action-details">
-            <div class="action-type">${action.type}</div>
-            <div class="action-params">${paramStr}</div>
+        <div class="action-item flex items-center gap-3 p-3 bg-surface/50 border border-border rounded-md transition-all animate-[slideIn_0.2s_ease-out] ${isEditing ? 'border-primary shadow-[0_0_20px_var(--color-primary-glow)] scale-[1.02] bg-surface' : 'hover:bg-surface-hover hover:border-border-light hover:translate-x-1'}" data-index="${i}">
+          <span class="action-index w-7 h-7 flex items-center justify-center bg-primary text-white rounded-full text-[11px] font-black shrink-0 shadow-lg shadow-primary-glow">${i + 1}</span>
+          <span class="action-icon text-lg shrink-0 drop-shadow-sm">${action.icon}</span>
+          <div class="action-details flex-1 min-w-0 ml-1">
+            <div class="action-type text-[12px] font-bold text-text uppercase tracking-wider mb-0.5">${action.type}</div>
+            <div class="action-params text-[11px] text-text-dim truncate font-mono bg-black/20 px-1.5 py-0.5 rounded-sm inline-block max-w-full">${paramStr}</div>
           </div>
-          <div class="action-controls">
-            <button class="action-btn action-btn-edit" onclick="editAction(${i})" title="Edit">✏️</button>
-            <button class="action-btn action-btn-remove" onclick="removeAction(${i})" title="Remove">✕</button>
+          <div class="action-controls flex gap-1.5 ml-auto shrink-0">
+            <button class="action-btn w-8 h-8 flex items-center justify-center bg-surface border border-border text-text-dim rounded-md cursor-pointer transition-all hover:bg-primary-glow hover:text-primary-light hover:border-primary" onclick="editAction(${i})" title="Edit">✏️</button>
+            <button class="action-btn w-8 h-8 flex items-center justify-center bg-surface border border-border text-text-dim rounded-md cursor-pointer transition-all hover:bg-danger-glow hover:text-danger hover:border-danger" onclick="removeAction(${i})" title="Remove">✕</button>
           </div>
         </div>
       `;
@@ -305,13 +368,22 @@ function renderActionList() {
 }
 
 function removeAction(index) {
-  if (editingIndex === index) {
-    cancelEdit();
-  }
-  actions.splice(index, 1);
-  renderActionList();
-  updateRunButton();
+  const action = actions[index];
+  showConfirmModal(
+    'Delete Action',
+    `Are you sure you want to delete the "${action.type.toUpperCase()}" action?`,
+    () => {
+      if (editingIndex === index) {
+        cancelEdit();
+      }
+      actions.splice(index, 1);
+      addLog('info', `🗑️ Removed action: ${action.type.toUpperCase()}`);
+      renderActionList();
+      updateRunButton();
+    }
+  );
 }
+
 
 function editAction(index) {
   const action = actions[index];
@@ -574,6 +646,223 @@ function updateSelectorHistoryUI() {
     .join('');
 }
 
+// ─── Project Management ──────────────────────────────
+async function loadProjects() {
+  try {
+    projects = await window.electronAPI.getProjects();
+    
+    // Auto-select first project if none active
+    if (!currentProject && projects.length > 0) {
+      currentProject = projects[0];
+      const loadedActions = await window.electronAPI.loadProject(currentProject);
+      if (loadedActions) {
+        actions = loadedActions;
+        renderActionList();
+        updateRunButton();
+      }
+    }
+    
+    updateProjectSelectorUI();
+  } catch (err) {
+    console.error('Failed to load projects:', err);
+  }
+}
+
+function updateProjectSelectorUI() {
+  $projectSelector.innerHTML = '';
+  
+  if (projects.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = "";
+    opt.textContent = "-- No Project --";
+    $projectSelector.appendChild(opt);
+  }
+
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    if (p === currentProject) opt.selected = true;
+    $projectSelector.appendChild(opt);
+  });
+}
+
+// Switch project
+$projectSelector.addEventListener('change', async () => {
+  const selected = $projectSelector.value;
+  if (selected === currentProject) return;
+
+  if (selected === '') {
+    currentProject = '';
+    actions = [];
+    renderActionList();
+    updateRunButton();
+    hideRenameUI();
+    return;
+  }
+
+  const loadedActions = await window.electronAPI.loadProject(selected);
+  if (loadedActions) {
+    currentProject = selected;
+    actions = loadedActions;
+    addLog('info', `📂 Loaded project: ${selected}`);
+  }
+  renderActionList();
+  updateRunButton();
+});
+
+// ➕ New Project
+$btnNewProject.addEventListener('click', async () => {
+  let num = 1;
+  while (projects.includes(String(num))) num++;
+  const name = String(num);
+
+  const res = await window.electronAPI.saveProject(name, []);
+  if (res.success) {
+    currentProject = name;
+    actions = [];
+    if (!projects.includes(name)) projects.push(name);
+    updateProjectSelectorUI();
+    renderActionList();
+    updateRunButton();
+    hideRenameUI(); // Hide if active
+    addLog('success', `➕ Created project: ${name}`);
+  } else {
+    addLog('error', `✕ Failed to create project: ${res.error}`);
+  }
+});
+
+function showRenameUI() {
+  if (!currentProject) return;
+  $renameInput.value = currentProject;
+  $renameContainer.classList.remove('hidden');
+  $renameInput.focus();
+  $renameInput.select();
+}
+
+function hideRenameUI() {
+  $renameContainer.classList.add('hidden');
+  $renameInput.value = '';
+}
+
+async function confirmRename() {
+  const newName = $renameInput.value.trim();
+  if (!newName || newName === currentProject) {
+    hideRenameUI();
+    return;
+  }
+
+  const safeName = newName.replace(/[^a-z0-9_\- ]/gi, '_');
+  if (!safeName) return;
+
+  const res = await window.electronAPI.renameProject(currentProject, safeName);
+  if (res.success) {
+    addLog('success', `✏️ Renamed: ${currentProject} → ${safeName}`);
+    projects = projects.map(p => p === currentProject ? safeName : p);
+    currentProject = safeName;
+    updateProjectSelectorUI();
+    hideRenameUI();
+  } else {
+    addLog('error', `✕ Rename failed: ${res.error}`);
+  }
+}
+
+// ✏️ Rename Project Toggle
+$btnRenameProject.addEventListener('click', () => {
+  if (!currentProject) {
+    addLog('warning', '⚠ Select a project first');
+    return;
+  }
+  
+  if ($renameContainer.classList.contains('hidden')) {
+    showRenameUI();
+  } else {
+    hideRenameUI();
+  }
+});
+
+$btnRenameConfirm.addEventListener('click', confirmRename);
+$btnRenameCancel.addEventListener('click', hideRenameUI);
+$renameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') confirmRename();
+  if (e.key === 'Escape') hideRenameUI();
+});
+
+// ─── Modal Helpers ──────────────────────────────────
+let modalCallback = null;
+
+function showConfirmModal(title, message, onConfirm) {
+  $modalTitle.textContent = title;
+  $modalMessage.textContent = message;
+  modalCallback = onConfirm;
+  $confirmModal.classList.remove('hidden');
+}
+
+function hideConfirmModal() {
+  $confirmModal.classList.add('hidden');
+  modalCallback = null;
+}
+
+$btnModalConfirm.addEventListener('click', () => {
+  if (modalCallback) modalCallback();
+  hideConfirmModal();
+});
+
+$btnModalCancel.addEventListener('click', hideConfirmModal);
+$confirmModal.addEventListener('click', (e) => {
+  if (e.target === $confirmModal) hideConfirmModal();
+});
+
+// 💾 Save Project
+$btnSaveProject.addEventListener('click', async () => {
+  if (!currentProject) {
+    addLog('warning', '⚠ Select or create a project first');
+    return;
+  }
+
+  const res = await window.electronAPI.saveProject(currentProject, actions);
+  if (res.success) {
+    addLog('success', `💾 Saved project: ${currentProject}`);
+  } else {
+    addLog('error', `✕ Save failed: ${res.error}`);
+  }
+});
+
+// 🗑️ Delete Project
+$btnDeleteProject.addEventListener('click', () => {
+  if (!currentProject) {
+    addLog('warning', '⚠ Select a project first');
+    return;
+  }
+
+  showConfirmModal(
+    'Delete Project',
+    `Are you sure you want to delete project "${currentProject}"? All actions will be lost.`,
+    async () => {
+      const res = await window.electronAPI.deleteProject(currentProject);
+      if (res.success) {
+        addLog('info', `🗑️ Deleted project: ${currentProject}`);
+        projects = projects.filter(p => p !== currentProject);
+        
+        if (projects.length > 0) {
+          currentProject = projects[0];
+          const loadedActions = await window.electronAPI.loadProject(currentProject);
+          actions = loadedActions || [];
+        } else {
+          currentProject = '';
+          actions = [];
+        }
+        
+        updateProjectSelectorUI();
+        renderActionList();
+        updateRunButton();
+      } else {
+        addLog('error', `✕ Delete failed: ${res.error}`);
+      }
+    }
+  );
+});
+
 window.electronAPI.onPickerCancelled(() => {
   addLog('warning', '⚠ Picker cancelled');
   resetPickerButton();
@@ -587,7 +876,7 @@ async function loadStoredTasks() {
       actions = stored;
       renderActionList();
       updateRunButton();
-      addLog('info', `󰄬 Loaded ${actions.length} saved action(s)`);
+      addLog('info', `📦 Loaded ${actions.length} saved action(s)`);
     }
   } catch (err) {
     console.error('Failed to load tasks:', err);
@@ -601,3 +890,4 @@ setTheme(savedTheme);
 renderActionFields();
 loadStoredTasks();
 loadSelectorHistory();
+loadProjects();

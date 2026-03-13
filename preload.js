@@ -15,6 +15,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveTasks: (tasks) => ipcRenderer.invoke('save-tasks', tasks),
   loadTasks: () => ipcRenderer.invoke('load-tasks'),
 
+  // Project Management
+  getProjects: () => ipcRenderer.invoke('get-projects'),
+  saveProject: (name, actions) => ipcRenderer.invoke('save-project', name, actions),
+  loadProject: (name) => ipcRenderer.invoke('load-project', name),
+  deleteProject: (name) => ipcRenderer.invoke('delete-project', name),
+  renameProject: (oldName, newName) => ipcRenderer.invoke('rename-project', oldName, newName),
+
   // Selector History
   saveSelectors: (selectors) => ipcRenderer.invoke('save-selectors', selectors),
   loadSelectors: () => ipcRenderer.invoke('load-selectors'),

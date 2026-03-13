@@ -5,11 +5,15 @@
   "main": "main.js",
   "scripts": {
     "dev": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "css:build": "tailwindcss -i renderer/input.css -o renderer/styles.css",
+    "css:watch": "tailwindcss -i renderer/input.css -o renderer/styles.css --watch"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
     "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "tailwindcss": "^4.2.1"
   },
   "dependencies": {
     "ws": "^8.18.0"
