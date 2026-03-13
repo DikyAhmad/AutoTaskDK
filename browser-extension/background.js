@@ -50,6 +50,9 @@ function connect() {
         } else if (msg.type === 'start-picker') {
           const tab = await getActiveTab();
           if (tab) {
+            // Focus the browser window
+            chrome.windows.update(tab.windowId, { focused: true });
+            
             await ensureContentScript(tab.id);
             chrome.tabs.sendMessage(tab.id, { type: 'start-picker' });
           }

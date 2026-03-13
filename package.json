@@ -1,7 +1,7 @@
 {
-  "name": "auto-click-ui",
+  "name": "autotask-dk",
   "version": "1.0.0",
-  "description": "Desktop auto-clicker with cross-browser extension support",
+  "description": "Automated workflow and task runner for browsers",
   "main": "main.js",
   "scripts": {
     "dev": "electron .",

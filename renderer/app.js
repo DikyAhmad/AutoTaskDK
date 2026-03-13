@@ -3,6 +3,8 @@ let actions = [];
 let isConnected = false;
 let isPickerActive = false;
 let pickerTargetFieldId = null;
+let editingIndex = null;
+let selectorHistory = [];
 
 // ─── Action Field Definitions ───────────────────────
 const ACTION_CONFIG = {
@@ -65,6 +67,27 @@ document.getElementById('btn-minimize').addEventListener('click', () => window.e
 document.getElementById('btn-maximize').addEventListener('click', () => window.electronAPI.maximize());
 document.getElementById('btn-close').addEventListener('click', () => window.electronAPI.close());
 
+// --- Theme Management ---
+const $btnTheme = document.getElementById('btn-theme');
+
+function setTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.classList.add('light-theme');
+    $btnTheme.textContent = '🌙';
+  } else {
+    document.documentElement.classList.remove('light-theme');
+    $btnTheme.textContent = '☀️';
+  }
+  localStorage.setItem('autotask-theme', theme);
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.classList.contains('light-theme');
+  setTheme(isLight ? 'dark' : 'light');
+}
+
+$btnTheme.addEventListener('click', toggleTheme);
+
 // ─── Dynamic Form Fields ────────────────────────────
 function renderActionFields() {
   const type = $actionType.value;
@@ -85,6 +108,7 @@ function renderActionFields() {
             id="field-${field.id}"
             placeholder="${field.placeholder}"
             autocomplete="off"
+            list="selector-history-list"
           />
           <button type="button" class="btn-pick" id="btn-pick-${field.id}" title="Pick element from page">
             🎯
@@ -130,7 +154,6 @@ function renderActionFields() {
 }
 
 $actionType.addEventListener('change', renderActionFields);
-renderActionFields(); // Initial render
 
 // ─── Add Action ─────────────────────────────────────
 $btnAdd.addEventListener('click', () => {
@@ -156,13 +179,27 @@ $btnAdd.addEventListener('click', () => {
           numericVal = numericVal * 1000;
         }
         params[field.id] = field.type === 'number' ? numericVal : val;
+
+        // Add to history if it's a selector
+        if (field.id === 'selector') {
+          addToSelectorHistory(val);
+        }
       }
     }
   });
 
   if (!valid) return;
 
-  actions.push({ type, params, icon: config.icon });
+  if (editingIndex !== null) {
+    // Update existing action
+    actions[editingIndex] = { type, params, icon: config.icon };
+    addLog('info', `󰄬 Updated action ${editingIndex + 1}: ${type}`);
+    cancelEdit(); // Reset editing state
+  } else {
+    // Add new action
+    actions.push({ type, params, icon: config.icon });
+  }
+
   renderActionList();
   clearFormFields();
   updateRunButton();
@@ -175,6 +212,9 @@ function clearFormFields() {
 
 // ─── Render Action List ─────────────────────────────
 function renderActionList() {
+  // Save tasks whenever list changes
+  window.electronAPI.saveTasks(actions);
+
   if (actions.length === 0) {
     $actionList.innerHTML = `
       <div id="empty-state" class="empty-state">
@@ -191,15 +231,20 @@ function renderActionList() {
         .map(([k, v]) => `${k}: ${v}`)
         .join(' | ');
 
+      const isEditing = editingIndex === i;
+
       return `
-        <div class="action-item" data-index="${i}">
+        <div class="action-item ${isEditing ? 'editing' : ''}" data-index="${i}">
           <span class="action-index">${i + 1}</span>
           <span class="action-icon">${action.icon}</span>
           <div class="action-details">
             <div class="action-type">${action.type}</div>
             <div class="action-params">${paramStr}</div>
           </div>
-          <button class="action-remove" onclick="removeAction(${i})" title="Remove">✕</button>
+          <div class="action-controls">
+            <button class="action-btn action-btn-edit" onclick="editAction(${i})" title="Edit">✏️</button>
+            <button class="action-btn action-btn-remove" onclick="removeAction(${i})" title="Remove">✕</button>
+          </div>
         </div>
       `;
     })
@@ -207,13 +252,63 @@ function renderActionList() {
 }
 
 function removeAction(index) {
+  if (editingIndex === index) {
+    cancelEdit();
+  }
   actions.splice(index, 1);
   renderActionList();
   updateRunButton();
 }
 
-// Make removeAction globally accessible
+function editAction(index) {
+  const action = actions[index];
+  editingIndex = index;
+
+  // Set dropdown to action type
+  $actionType.value = action.type;
+  renderActionFields();
+
+  // Populate fields
+  const config = ACTION_CONFIG[action.type];
+  config.fields.forEach((field) => {
+    const input = document.getElementById(`field-${field.id}`);
+    if (input) {
+      const val = action.params[field.id];
+      if (field.type === 'checkbox') {
+        input.checked = !!val;
+      } else if (field.id === 'ms' || field.id === 'timeout') {
+        // Convert ms back to seconds for UI
+        input.value = val / 1000;
+      } else {
+        input.value = val;
+      }
+    }
+  });
+
+  // Update UI
+  document.getElementById('action-form').classList.add('editing');
+  $btnAdd.innerHTML = '<span>󰄬</span> Update Action';
+  
+  // Scroll form into view
+  document.getElementById('task-panel').scrollTop = 0;
+  
+  renderActionList(); // Refresh list to show highlight
+}
+
+function cancelEdit() {
+  editingIndex = null;
+  document.getElementById('action-form').classList.remove('editing');
+  $btnAdd.innerHTML = '<span>＋</span> Add Action';
+  clearFormFields();
+  renderActionList();
+}
+
+document.getElementById('btn-cancel-edit').addEventListener('click', cancelEdit);
+
+// Make functions globally accessible
 window.removeAction = removeAction;
+window.editAction = editAction;
+window.cancelEdit = cancelEdit;
 
 // ─── Run / Clear ────────────────────────────────────
 function updateRunButton() {
@@ -378,13 +473,78 @@ window.electronAPI.onPickerResult((data) => {
       input.value = data.selector;
       input.style.borderColor = 'var(--color-success)';
       setTimeout(() => (input.style.borderColor = ''), 2000);
+      
+      // Also add to history
+      addToSelectorHistory(data.selector);
     }
   }
 
   resetPickerButton();
 });
 
+// ─── Selector History ──────────────────────────────
+async function loadSelectorHistory() {
+  try {
+    const stored = await window.electronAPI.loadSelectors();
+    if (stored && Array.isArray(stored)) {
+      selectorHistory = stored;
+      updateSelectorHistoryUI();
+    }
+  } catch (err) {
+    console.error('Failed to load selector history:', err);
+  }
+}
+
+function addToSelectorHistory(selector) {
+  if (!selector || typeof selector !== 'string') return;
+  const s = selector.trim();
+  if (!s) return;
+
+  // Keep it unique and move to front
+  selectorHistory = [s, ...selectorHistory.filter((item) => item !== s)];
+  
+  // Keep last 50 items
+  if (selectorHistory.length > 50) {
+    selectorHistory = selectorHistory.slice(0, 50);
+  }
+
+  updateSelectorHistoryUI();
+  window.electronAPI.saveSelectors(selectorHistory);
+}
+
+function updateSelectorHistoryUI() {
+  const datalist = document.getElementById('selector-history-list');
+  if (!datalist) return;
+  
+  datalist.innerHTML = selectorHistory
+    .map(s => `<option value="${s}">`)
+    .join('');
+}
+
 window.electronAPI.onPickerCancelled(() => {
   addLog('warning', '⚠ Picker cancelled');
   resetPickerButton();
 });
+
+// ─── Persistence ────────────────────────────────────
+async function loadStoredTasks() {
+  try {
+    const stored = await window.electronAPI.loadTasks();
+    if (stored && Array.isArray(stored) && stored.length > 0) {
+      actions = stored;
+      renderActionList();
+      updateRunButton();
+      addLog('info', `󰄬 Loaded ${actions.length} saved action(s)`);
+    }
+  } catch (err) {
+    console.error('Failed to load tasks:', err);
+  }
+}
+
+// ─── Initialization ─────────────────────────────────
+const savedTheme = localStorage.getItem('autotask-theme') || 'dark';
+setTheme(savedTheme);
+
+renderActionFields();
+loadStoredTasks();
+loadSelectorHistory();

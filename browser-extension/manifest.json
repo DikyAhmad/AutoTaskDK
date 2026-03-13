@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "auto-task-dk",
+  "name": "AutoTaskDK",
   "version": "1.0.1",
   "description": "Connects to Auto Click UI desktop app for browser automation",
   "permissions": [
@@ -24,7 +24,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Auto Click UI"
+    "default_title": "AutoTaskDK"
   },
   "icons": {
     "16": "icons/icon16.png",

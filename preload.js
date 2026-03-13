@@ -11,6 +11,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Status
   getStatus: () => ipcRenderer.invoke('get-status'),
 
+  // Persistence
+  saveTasks: (tasks) => ipcRenderer.invoke('save-tasks', tasks),
+  loadTasks: () => ipcRenderer.invoke('load-tasks'),
+
+  // Selector History
+  saveSelectors: (selectors) => ipcRenderer.invoke('save-selectors', selectors),
+  loadSelectors: () => ipcRenderer.invoke('load-selectors'),
+
   // Window controls
   minimize: () => ipcRenderer.invoke('window-minimize'),
   maximize: () => ipcRenderer.invoke('window-maximize'),

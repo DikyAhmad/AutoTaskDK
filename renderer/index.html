@@ -15,9 +15,12 @@
     <header id="titlebar">
       <div class="titlebar-drag">
         <span class="titlebar-icon">⚡</span>
-        <span class="titlebar-title">Auto Click UI</span>
+        <span class="titlebar-title">AutoTaskDK</span>
       </div>
       <div class="titlebar-controls">
+        <button id="btn-theme" class="titlebar-btn" title="Toggle Light/Dark Mode">
+          ☀️
+        </button>
         <button id="btn-minimize" class="titlebar-btn" title="Minimize">
           ─
         </button>
@@ -63,9 +66,14 @@
             <!-- Dynamic fields rendered by JS -->
             <div id="action-fields"></div>
 
-            <button id="btn-add-action" class="btn btn-primary">
-              <span>＋</span> Add Action
-            </button>
+            <div class="form-actions">
+              <button id="btn-add-action" class="btn btn-primary">
+                <span>＋</span> Add Action
+              </button>
+              <button id="btn-cancel-edit" class="btn btn-ghost btn-cancel">
+                Cancel
+              </button>
+            </div>
           </div>
 
           <!-- Action list -->
@@ -99,6 +107,8 @@
         </section>
       </div>
     </main>
+
+    <datalist id="selector-history-list"></datalist>
 
     <script src="app.js"></script>
   </body>

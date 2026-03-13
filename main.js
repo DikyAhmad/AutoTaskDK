@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const { WebSocketServer } = require("ws");
 
 let mainWindow;
@@ -14,6 +15,7 @@ function createWindow() {
     height: 700,
     minWidth: 600,
     minHeight: 500,
+    title: "AutoTaskDK",
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",
@@ -145,6 +147,57 @@ ipcMain.handle("window-maximize", () => {
   }
 });
 ipcMain.handle("window-close", () => mainWindow?.close());
+
+// --- Persistence ---
+const tasksPath = path.join(app.getPath("userData"), "tasks.json");
+
+ipcMain.handle("save-tasks", async (_event, tasks) => {
+  try {
+    fs.writeFileSync(tasksPath, JSON.stringify(tasks, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error("Failed to save tasks:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("load-tasks", async () => {
+  try {
+    if (fs.existsSync(tasksPath)) {
+      const data = fs.readFileSync(tasksPath, "utf-8");
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (err) {
+    console.error("Failed to load tasks:", err);
+    return [];
+  }
+});
+
+const selectorsPath = path.join(app.getPath("userData"), "selectors.json");
+
+ipcMain.handle("save-selectors", async (_event, selectors) => {
+  try {
+    fs.writeFileSync(selectorsPath, JSON.stringify(selectors, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error("Failed to save selectors:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("load-selectors", async () => {
+  try {
+    if (fs.existsSync(selectorsPath)) {
+      const data = fs.readFileSync(selectorsPath, "utf-8");
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (err) {
+    console.error("Failed to load selectors:", err);
+    return [];
+  }
+});
 
 // ─── App Lifecycle ────────────────────────────────────
 app.whenReady().then(() => {
