@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auto Click UI</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Titlebar -->
+    <header id="titlebar">
+      <div class="titlebar-drag">
+        <span class="titlebar-icon">⚡</span>
+        <span class="titlebar-title">Auto Click UI</span>
+      </div>
+      <div class="titlebar-controls">
+        <button id="btn-minimize" class="titlebar-btn" title="Minimize">
+          ─
+        </button>
+        <button id="btn-maximize" class="titlebar-btn" title="Maximize">
+          ☐
+        </button>
+        <button id="btn-close" class="titlebar-btn btn-close" title="Close">
+          ✕
+        </button>
+      </div>
+    </header>
+
+    <main id="app">
+      <!-- Status Bar -->
+      <div id="status-bar">
+        <div id="connection-status" class="status-disconnected">
+          <span class="status-dot"></span>
+          <span id="status-text">Disconnected</span>
+        </div>
+        <span id="status-info">Install browser extension & refresh</span>
+      </div>
+
+      <!-- Two-column layout -->
+      <div id="workspace">
+        <!-- Left: Task Builder -->
+        <section id="task-panel" class="glass-panel">
+          <h2>📋 Task Builder</h2>
+
+          <!-- Add action form -->
+          <div id="action-form" class="glass-card">
+            <div class="form-row">
+              <label for="action-type">Action</label>
+              <select id="action-type">
+                <option value="click">🖱️ Click</option>
+                <option value="type">⌨️ Type</option>
+                <option value="read">📖 Read</option>
+                <option value="wait">⏳ Wait</option>
+                <option value="navigate">🔗 Navigate</option>
+                <option value="delay">⏱️ Delay</option>
+              </select>
+            </div>
+
+            <!-- Dynamic fields rendered by JS -->
+            <div id="action-fields"></div>
+
+            <button id="btn-add-action" class="btn btn-primary">
+              <span>＋</span> Add Action
+            </button>
+          </div>
+
+          <!-- Action list -->
+          <div id="action-list">
+            <div id="empty-state" class="empty-state">
+              <span>🎯</span>
+              <p>No actions yet. Add your first action above.</p>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div id="task-controls">
+            <button id="btn-run" class="btn btn-success" disabled>
+              ▶ Run Task
+            </button>
+            <button id="btn-clear" class="btn btn-ghost">🗑️ Clear All</button>
+          </div>
+        </section>
+
+        <!-- Right: Log Viewer -->
+        <section id="log-panel" class="glass-panel">
+          <div class="panel-header">
+            <h2>📊 Logs</h2>
+            <button id="btn-clear-logs" class="btn btn-ghost btn-sm">
+              Clear
+            </button>
+          </div>
+          <div id="log-list">
+            <div class="log-empty">Waiting for actions…</div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

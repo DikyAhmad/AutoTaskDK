@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 280px;
+      min-height: 140px;
+      font-family: 'Segoe UI', Inter, -apple-system, sans-serif;
+      background: #0f0f2a;
+      color: #e8e8f0;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .header-icon {
+      font-size: 20px;
+    }
+
+    .header-text h1 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: #8888aa;
+    }
+
+    .status-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.connected {
+      background: #00cec9;
+      box-shadow: 0 0 8px rgba(0, 206, 201, 0.4);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.disconnected {
+      background: #ff6b6b;
+      box-shadow: 0 0 8px rgba(255, 107, 107, 0.4);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-info {
+      flex: 1;
+    }
+
+    .status-label {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-label.connected { color: #00cec9; }
+    .status-label.disconnected { color: #ff6b6b; }
+
+    .status-desc {
+      font-size: 11px;
+      color: #8888aa;
+    }
+
+    .btn-reconnect {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #6c5ce7, #8b7cf7);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 200ms ease;
+    }
+
+    .btn-reconnect:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-reconnect:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-icon">⚡</span>
+    <div class="header-text">
+      <h1>Auto Click UI</h1>
+      <p>Browser Extension Connector</p>
+    </div>
+  </div>
+
+  <div class="status-card">
+    <div id="status-dot" class="status-dot disconnected"></div>
+    <div class="status-info">
+      <div id="status-label" class="status-label disconnected">Disconnected</div>
+      <div id="status-desc" class="status-desc">Not connected to desktop app</div>
+    </div>
+  </div>
+
+  <button id="btn-reconnect" class="btn-reconnect">🔄 Reconnect</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>

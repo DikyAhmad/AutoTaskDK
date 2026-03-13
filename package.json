@@ -1,0 +1,17 @@
+{
+  "name": "auto-click-ui",
+  "version": "1.0.0",
+  "description": "Desktop auto-clicker with cross-browser extension support",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
