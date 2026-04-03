@@ -3,6 +3,20 @@
   "version": "1.0.0",
   "description": "Automated workflow and task runner for browsers",
   "main": "main.js",
+  "build": {
+    "appId": "com.autotaskdk.app",
+    "productName": "AutoTask DK",
+    "win": {
+      "target": "nsis",
+      "icon": "logo-autotaskdk.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
   "scripts": {
     "dev": "electron .",
     "build": "electron-builder",
