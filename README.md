@@ -1,8 +1,13 @@
-# 🤖 AutoTaskDK
+# <img src="logo-autotaskdk.png" width="40" vertical-align="middle"> AutoTaskDK
 
 **AutoTaskDK** is a powerful, premium browser automation suite designed for simplicity and efficiency. It bridges the gap between a desktop control center and your browser tabs, allowing you to build, manage, and execute complex automation tasks with a sleek "No-Code" interface.
 
-![AutoTaskDK Logo](logo-autotaskdk.png)
+![Version](https://img.shields.io/badge/version-1.0.0-orange?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
+![Electron](https://img.shields.io/badge/Electron-33.0.0-47848F?style=flat-square&logo=electron)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat-square&logo=tailwind-css)
+
+
 
 ## ✨ Key Features
 
@@ -32,8 +37,8 @@
 ### 2. Desktop App Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/DikyAhmad/auto-task-dk.git
-   cd auto-task-dk
+   git clone https://github.com/DikyAhmad/AutoTaskDK.git
+   cd AutoTaskDK
    ```
 2. Install dependencies:
    ```bash
@@ -65,4 +70,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-Built with ❤️ by [Diky Ahmad](https://github.com/DikyAhmad)
+Developed with ❤️ by @AutoTaskDK
