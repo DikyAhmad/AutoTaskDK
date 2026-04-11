@@ -2,10 +2,10 @@
 
 **AutoTaskDK** is a powerful, premium browser automation suite designed for simplicity and efficiency. It bridges the gap between a desktop control center and your browser tabs, allowing you to build, manage, and execute complex automation tasks with a sleek "No-Code" interface.
 
-![Version](https://img.shields.io/badge/version-1.0.0-orange?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
-![Electron](https://img.shields.io/badge/Electron-33.0.0-47848F?style=flat-square&logo=electron)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat-square&logo=tailwind-css)
+![Version](https://img.shields.io/badge/version-1.0.0-orange)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Electron](https://img.shields.io/badge/Electron-33.0.0-47848F?&logo=electron)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?&logo=tailwind-css)
 
 
 
@@ -67,7 +67,3 @@ The app's aesthetic is controlled via `renderer/input.css` using Tailwind v4's `
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-Developed with ❤️ by @AutoTaskDK
