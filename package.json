@@ -1,6 +1,6 @@
 {
   "name": "autotask-dk",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Automated workflow and task runner for browsers",
   "main": "main.js",
   "build": {
