@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Task execution
   executeAction: (action) => ipcRenderer.invoke('execute-action', action),
   executeTask: (actions) => ipcRenderer.invoke('execute-task', actions),
+  stopTask: () => ipcRenderer.invoke('stop-task'),
 
   // Element picker
   startPicker: () => ipcRenderer.invoke('start-picker'),

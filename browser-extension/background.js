@@ -10,6 +10,16 @@ const KEEPALIVE_ALARM = 'ws-keepalive';
 
 let isManualDisconnect = false;
 let initPromise = null;
+let stopTaskRequested = false;
+
+async function interruptibleSleep(ms) {
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    if (stopTaskRequested) throw new Error('stopped');
+    const remaining = ms - (Date.now() - start);
+    await new Promise((r) => setTimeout(r, Math.min(100, remaining)));
+  }
+}
 
 function waitForInit() {
   if (initPromise) return initPromise;
@@ -73,6 +83,9 @@ function connect() {
             await ensureContentScript(tab.id);
             chrome.tabs.sendMessage(tab.id, { type: 'start-picker' });
           }
+        } else if (msg.type === 'stop-task') {
+          stopTaskRequested = true;
+          console.log('[AutoClick] Stop task requested');
         }
       } catch (err) {
         console.error('[AutoClick] Message parse error:', err);
@@ -197,8 +210,15 @@ async function executeAction(action) {
 // ─── Execute Task (Sequential Actions) ──────────────
 async function executeTask(actions) {
   const total = actions.length;
+  stopTaskRequested = false;
 
   for (let i = 0; i < total; i++) {
+    if (stopTaskRequested) {
+      console.log('[AutoClick] Task execution stopped by user');
+      sendToElectron({ type: 'task-stopped', total, step: i });
+      return;
+    }
+
     const action = actions[i];
     const step = i + 1;
 
@@ -219,23 +239,29 @@ async function executeTask(actions) {
 
       if (action.type === 'navigate') {
         await chrome.tabs.update(tab.id, { url: action.url });
-        // Wait for page to load
-        await new Promise((resolve) => {
-          const listener = (tabId, changeInfo) => {
-            if (tabId === tab.id && changeInfo.status === 'complete') {
-              chrome.tabs.onUpdated.removeListener(listener);
-              resolve();
-            }
-          };
-          chrome.tabs.onUpdated.addListener(listener);
-          setTimeout(() => {
-            chrome.tabs.onUpdated.removeListener(listener);
-            resolve();
-          }, 15000);
-        });
+        // Wait for page to load or stop
+        const loadStart = Date.now();
+        const timeout = 15000;
+        let isLoaded = false;
+
+        const listener = (tabId, changeInfo) => {
+          if (tabId === tab.id && changeInfo.status === 'complete') {
+            isLoaded = true;
+          }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+
+        try {
+          while (!isLoaded && (Date.now() - loadStart < timeout)) {
+            if (stopTaskRequested) throw new Error('stopped');
+            await new Promise((r) => setTimeout(r, 100));
+          }
+        } finally {
+          chrome.tabs.onUpdated.removeListener(listener);
+        }
         result = action.url;
       } else if (action.type === 'delay') {
-        await new Promise((r) => setTimeout(r, action.ms || 1000));
+        await interruptibleSleep(action.ms || 1000);
         result = `${action.ms}ms`;
       } else {
         // DOM actions via content script
@@ -265,6 +291,12 @@ async function executeTask(actions) {
         result,
       });
     } catch (err) {
+      if (err.message === 'stopped') {
+        console.log('[AutoClick] Task execution interrupted during wait');
+        sendToElectron({ type: 'task-stopped', total, step: i });
+        return;
+      }
+
       sendToElectron({
         type: 'task-progress',
         step,

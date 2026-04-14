@@ -112,6 +112,21 @@ ipcMain.handle("execute-task", async (_event, actions) => {
   return { sent };
 });
 
+// Stop ongoing task
+ipcMain.handle("stop-task", async () => {
+  const payload = JSON.stringify({ type: "stop-task" });
+  let sent = false;
+
+  for (const [, ws] of connectedClients) {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(payload);
+      sent = true;
+    }
+  }
+
+  return { sent };
+});
+
 // Start element picker in extension
 ipcMain.handle("start-picker", async () => {
   const payload = JSON.stringify({ type: "start-picker" });

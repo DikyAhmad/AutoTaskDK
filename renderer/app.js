@@ -7,6 +7,7 @@ let editingIndex = null;
 let selectorHistory = [];
 let currentProject = ""; // Name of the active project
 let projects = []; // List of available project names
+let isTaskExecuting = false;
 
 // ─── Action Field Definitions ───────────────────────
 const ACTION_CONFIG = {
@@ -59,6 +60,7 @@ const $actionFields = document.getElementById('action-fields');
 const $btnAdd = document.getElementById('btn-add-action');
 const $actionList = document.getElementById('action-list');
 const $btnRun = document.getElementById('btn-run');
+const $btnStop = document.getElementById('btn-stop');
 const $btnClear = document.getElementById('btn-clear');
 const $logList = document.getElementById('log-list');
 const $btnClearLogs = document.getElementById('btn-clear-logs');
@@ -450,12 +452,40 @@ $btnRun.addEventListener('click', async () => {
 
   addLog('info', `▶ Running task with ${taskActions.length} action(s)...`);
   console.log('[DEBUG] Task Actions:', taskActions);
+  
+  setExecutionState(true);
   const result = await window.electronAPI.executeTask(taskActions);
 
   if (!result.sent) {
     addLog('error', '✕ Failed to send — no extension connected');
+    setExecutionState(false);
   }
 });
+
+$btnStop.addEventListener('click', () => {
+  showConfirmModal(
+    'Stop Task',
+    'Are you sure you want to stop the current task execution?',
+    async () => {
+      addLog('warning', '⏹ Stopping task...');
+      await window.electronAPI.stopTask();
+      // State will be updated via 'task-stopped' event
+    },
+    'Confirm Stop'
+  );
+});
+
+function setExecutionState(executing) {
+  isTaskExecuting = executing;
+  if (executing) {
+    $btnRun.classList.add('hidden');
+    $btnStop.classList.remove('hidden');
+  } else {
+    $btnRun.classList.remove('hidden');
+    $btnStop.classList.add('hidden');
+    updateRunButton();
+  }
+}
 
 $btnClear.addEventListener('click', () => {
   actions = [];
@@ -529,10 +559,15 @@ window.electronAPI.onActionResult((data) => {
     } else if (status === 'error') {
       addLog('error', `${prefix} ✕ ${action.type.toUpperCase()} — ${data.error}`);
     }
+  } else if (data.type === 'task-stopped') {
+    addLog('warning', `⏹ Task stopped by user at step ${data.step}/${data.total}.`);
+    setExecutionState(false);
   } else if (data.type === 'task-complete') {
     addLog('success', `✓ Task completed! (${data.total} actions)`);
+    setExecutionState(false);
   } else if (data.type === 'task-error') {
     addLog('error', `✕ Task failed: ${data.error}`);
+    setExecutionState(false);
   } else if (data.type === 'result') {
     // Single action result
     if (data.success) {
@@ -791,9 +826,19 @@ $renameInput.addEventListener('keydown', (e) => {
 // ─── Modal Helpers ──────────────────────────────────
 let modalCallback = null;
 
-function showConfirmModal(title, message, onConfirm) {
+function showConfirmModal(title, message, onConfirm, confirmText = 'Confirm Delete') {
   $modalTitle.textContent = title;
   $modalMessage.textContent = message;
+  $btnModalConfirm.textContent = confirmText;
+  
+  if (confirmText === 'Confirm Stop') {
+    $btnModalConfirm.classList.remove('bg-danger');
+    $btnModalConfirm.classList.add('bg-warning', 'text-black');
+  } else {
+    $btnModalConfirm.classList.add('bg-danger');
+    $btnModalConfirm.classList.remove('bg-warning', 'text-black');
+  }
+
   modalCallback = onConfirm;
   $confirmModal.classList.remove('hidden');
 }

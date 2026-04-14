@@ -25,6 +25,7 @@
   --color-text: #e8e8f0;
   --color-text-dim: #8888aa;
   --color-text-muted: #555577;
+  --color-btn-text: #ffffff;
 
   --glass-bg: #1a1a2e;
   --glass-blur: 0px;
@@ -80,6 +81,7 @@
     --color-text: #2f3640;
     --color-text-dim: #718093;
     --color-text-muted: #95afc0;
+    --color-btn-text: #000000;
 
     --glass-bg: #ffffff;
     --glass-border: #dcdde1;
