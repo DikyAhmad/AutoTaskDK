@@ -1,11 +1,7 @@
-<p align="center">
-  <img src="logo-autotaskdk.png" width="190" alt="AutoTaskDK Logo">
-</p>
-<div align="center" style="font-size: 2.5em; font-weight: bold; margin-top: -50px;">AutoTaskDK</div>
 
-<p align="center" style="margin-top: -5px;">
-  <img src="https://img.shields.io/badge/version-1.0.2-orange" alt="Version">
-</p>
+# AutoTaskDK <img align="center" src="https://img.shields.io/badge/version-1.0.2-orange" alt="Version">
+**AutoTaskDK** is a powerful, premium browser automation suite designed for simplicity and efficiency. It bridges the gap between a desktop control center and your browser tabs, allowing you to build, manage, and execute complex automation tasks with a sleek "No-Code" interface.
+
 
 ## ✨ Key Features
 
